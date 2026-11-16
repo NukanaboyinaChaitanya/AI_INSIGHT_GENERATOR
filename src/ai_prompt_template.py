@@ -4,54 +4,88 @@ def create_business_analysis_prompt(
     category_analysis,
     subcategory_analysis
 ):
-    # Convert KPI results into readable text
-    kpi_text = "\n".join(
-        f"{key}: {value}"
-        for key, value in kpi_summary.items()
-    )
 
-    # Convert grouped analysis into readable tables
+    if category_analysis.empty or subcategory_analysis.empty:
+        raise ValueError("Business analysis data is empty.")
+
+    # Calculate verified business findings using Python
+    highest_sales = category_analysis["Total_Sales"].idxmax()
+
+    highest_margin = category_analysis["Profit_Margin"].idxmax()
+
+    lowest_margin = category_analysis["Profit_Margin"].idxmin()
+
+    # Identify loss-making subcategories
+    loss_making = subcategory_analysis[
+        subcategory_analysis["Total_Profit"] < 0
+    ]
+
+    # Format loss-making subcategories
+    if not loss_making.empty:
+        loss_details = "\n".join(
+            f"{name}: Profit ${row['Total_Profit']:,.2f}, "
+            f"Margin {row['Profit_Margin']:.2f}%"
+            for name, row in loss_making.iterrows()
+        )
+    else:
+        loss_details = "No loss-making subcategories."
+
+    # Convert analysis tables into readable text
     category_table = category_analysis.round(2).to_string()
 
     subcategory_table = subcategory_analysis.round(2).to_string()
 
     prompt = f"""
-You are an experienced Business Data Analyst.
+You are an experienced retail business analyst.
 
-Analyze the following retail business data.
+Analyze the following verified retail business results.
 
 BUSINESS KPIs:
-{kpi_text}
+{kpi_summary}
 
-CATEGORY ANALYSIS:
+VERIFIED CATEGORY FINDINGS:
+
+Category with highest sales: {highest_sales}
+Sales: ${category_analysis.loc[highest_sales, 'Total_Sales']:,.2f}
+
+Category with highest profit margin: {highest_margin}
+Margin: {category_analysis.loc[highest_margin, 'Profit_Margin']:.2f}%
+
+Category with lowest profit margin: {lowest_margin}
+Margin: {category_analysis.loc[lowest_margin, 'Profit_Margin']:.2f}%
+
+LOSS-MAKING SUBCATEGORIES:
+{loss_details}
+
+COMPLETE CATEGORY ANALYSIS:
 {category_table}
 
-SUBCATEGORY ANALYSIS:
+COMPLETE SUBCATEGORY ANALYSIS:
 {subcategory_table}
 
-Your tasks:
+IMPORTANT RULES:
 
-1. Summarize the overall business performance.
-2. Identify the highest-performing category.
-3. Identify the lowest-performing category.
-4. Identify loss-making subcategories.
-5. Explain important business patterns.
-6. Provide five practical business recommendations.
+1. Treat all supplied numerical values and verified findings as correct.
+2. Technology has the highest sales, if confirmed by the supplied findings.
+3. Never assign one category's sales or profit to another category.
+4. Do not recalculate supplied metrics.
+5. Do not invent facts or causes.
+6. Negative aggregate profit does not mean every transaction is loss-making.
+7. Do not describe average order value as stable without historical comparison.
+8. Present recommendations as areas to investigate, not confirmed causes.
+9. Distinguish observations from possible explanations.
+10. Avoid repeating the same information.
 
-Guidelines:
-- Use only the information provided.
-- Support findings with actual numbers.
-- Use simple, professional English.
-- Do not invent facts or assume causes.
-- Clearly distinguish observations from possible explanations.
-- Avoid repeating the same finding.
-
-Format your response using these sections:
+Write a professional business report using exactly these sections:
 
 1. Executive Summary
 2. Key Business Findings
 3. Areas of Concern
-4. Business Recommendations
+4. Three Practical Business Recommendations
+
+Use simple professional English.
+Keep the report approximately 150-200 words.
+Complete all four sections.
 """
 
     return prompt
