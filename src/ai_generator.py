@@ -1,40 +1,50 @@
 
-import os
-from pathlib import Path
+import requests
 
-from dotenv import load_dotenv
-from openai import OpenAI
-
-
-# Locate the main project folder
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
-# Load API key from the project's .env file
-load_dotenv(PROJECT_ROOT / ".env", override=True)
+OLLAMA_URL = "http://localhost:11434/api/chat"
+MODEL_NAME = "qwen3.5:4b"
 
 
 def generate_ai_business_report(prompt):
 
-    api_key = os.getenv("OPENAI_API_KEY")
-
-    if not api_key:
-        raise ValueError(
-            "OPENAI_API_KEY not found. Check your .env file."
-        )
-
     if not prompt or not prompt.strip():
         raise ValueError("The prompt cannot be empty.")
 
-    client = OpenAI(api_key=api_key)
+    payload = {
+        "model": MODEL_NAME,
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "stream": False
+    }
 
-    response = client.responses.create(
-        model="gpt-6-luna",
-        input=prompt
-    )
+    try:
+        response = requests.post(
+            OLLAMA_URL,
+            json=payload,
+            timeout=300
+        )
 
-    report = response.output_text
+        response.raise_for_status()
 
-    if not report:
-        raise RuntimeError("The AI model returned an empty report.")
+        result = response.json()
 
-    return report
+        report = result["message"]["content"].strip()
+
+        if not report:
+            raise RuntimeError("Ollama returned an empty response.")
+
+        return report
+
+    except requests.exceptions.ConnectionError as error:
+        raise RuntimeError(
+            "Cannot connect to Ollama. Make sure Ollama is running."
+        ) from error
+
+    except requests.exceptions.Timeout as error:
+        raise RuntimeError(
+            "The AI model took too long to respond."
+        ) from error
