@@ -6,9 +6,9 @@ import streamlit as st
 import plotly.express as px
 
 
-# --------------------------------------------------
+# ==================================================
 # 1. PROJECT PATHS
-# --------------------------------------------------
+# ==================================================
 
 PROJECT_DIR = Path(__file__).resolve().parent
 
@@ -20,9 +20,9 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 
-# --------------------------------------------------
+# ==================================================
 # 2. IMPORT PROJECT MODULES
-# --------------------------------------------------
+# ==================================================
 
 from data_processor import (
     load_excel_data,
@@ -41,9 +41,9 @@ from ai_prompt_template import create_business_analysis_prompt
 from ai_generator import generate_ai_business_report
 
 
-# --------------------------------------------------
-# 3. PAGE CONFIGURATION
-# --------------------------------------------------
+# ==================================================
+# 3. STREAMLIT PAGE CONFIGURATION
+# ==================================================
 
 st.set_page_config(
     page_title="Business Insights Dashboard",
@@ -58,17 +58,17 @@ st.caption(
 )
 
 
-# --------------------------------------------------
+# ==================================================
 # 4. LOAD AND PROCESS DATA
-# --------------------------------------------------
+# ==================================================
 
 @st.cache_data
 def prepare_dashboard(file_path):
 
-    # Load dataset
+    # Load Excel dataset
     orders = load_excel_data(file_path)
 
-    # Clean dataset
+    # Clean data
     orders_clean = clean_data(orders)
 
     # Calculate KPIs
@@ -91,7 +91,7 @@ def prepare_dashboard(file_path):
         subcategory_analysis
     )
 
-    # Generate rule-based business recommendations
+    # Generate rule-based recommendations
     recommendations = generate_business_recommendations(
         category_analysis,
         subcategory_analysis
@@ -116,16 +116,22 @@ def prepare_dashboard(file_path):
     )
 
 
-# --------------------------------------------------
-# 5. CHECK DATASET AND PREPARE DASHBOARD
-# --------------------------------------------------
+# ==================================================
+# 5. CHECK DATASET
+# ==================================================
 
 if not DATA_PATH.exists():
 
-    st.error("Excel dataset not found.")
+    st.error(
+        f"Excel dataset not found: {DATA_PATH}"
+    )
 
     st.stop()
 
+
+# ==================================================
+# 6. PREPARE DASHBOARD DATA
+# ==================================================
 
 try:
 
@@ -149,17 +155,17 @@ except Exception as error:
     st.stop()
 
 
-# Prepare chart and table data
+# Convert analysis DataFrames for displaying tables
 category_df = category_analysis.reset_index()
 
 subcategory_df = subcategory_analysis.reset_index()
 
 
-# --------------------------------------------------
-# 6. BUSINESS KPI METRICS
-# --------------------------------------------------
+# ==================================================
+# 7. BUSINESS KPI METRICS
+# ==================================================
 
-st.header("Business Performance")
+st.header("📈 Business Performance")
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -205,11 +211,11 @@ col7.metric(
 st.divider()
 
 
-# --------------------------------------------------
-# 7. MONTHLY SALES TREND
-# --------------------------------------------------
+# ==================================================
+# 8. MONTHLY SALES TREND
+# ==================================================
 
-st.header("Monthly Sales Trend")
+st.header("📅 Monthly Sales Trend")
 
 fig1 = px.line(
     monthly_sales,
@@ -225,11 +231,11 @@ st.plotly_chart(
 )
 
 
-# --------------------------------------------------
-# 8. SALES BY CATEGORY
-# --------------------------------------------------
+# ==================================================
+# 9. SALES BY CATEGORY
+# ==================================================
 
-st.header("Category Performance")
+st.header("📊 Category Performance")
 
 col1, col2 = st.columns(2)
 
@@ -248,9 +254,9 @@ with col1:
     )
 
 
-# --------------------------------------------------
-# 9. PROFIT BY SUBCATEGORY
-# --------------------------------------------------
+# ==================================================
+# 10. PROFIT BY SUBCATEGORY
+# ==================================================
 
 with col2:
 
@@ -277,9 +283,9 @@ with col2:
 st.divider()
 
 
-# --------------------------------------------------
-# 10. BUSINESS INSIGHTS
-# --------------------------------------------------
+# ==================================================
+# 11. BUSINESS INSIGHTS
+# ==================================================
 
 st.header("🔍 Business Insights")
 
@@ -288,9 +294,9 @@ for number, insight in enumerate(insights, start=1):
     st.write(f"**{number}.** {insight}")
 
 
-# --------------------------------------------------
-# 11. BUSINESS RECOMMENDATIONS
-# --------------------------------------------------
+# ==================================================
+# 12. BUSINESS RECOMMENDATIONS
+# ==================================================
 
 st.header("💡 Business Recommendations")
 
@@ -305,17 +311,18 @@ for number, recommendation in enumerate(
 st.divider()
 
 
-# --------------------------------------------------
-# 12. DETAILED ANALYSIS TABLES
-# --------------------------------------------------
+# ==================================================
+# 13. DETAILED ANALYSIS TABLES
+# ==================================================
 
-st.header("Detailed Business Analysis")
+st.header("📋 Detailed Business Analysis")
 
 with st.expander("View Category Analysis"):
 
     st.dataframe(
         category_df,
-        use_container_width=True
+        use_container_width=True,
+        hide_index=True
     )
 
 
@@ -323,34 +330,40 @@ with st.expander("View Subcategory Analysis"):
 
     st.dataframe(
         subcategory_df,
-        use_container_width=True
+        use_container_width=True,
+        hide_index=True
     )
 
 
-# --------------------------------------------------
-# 13. AI-GENERATED BUSINESS REPORT
-# --------------------------------------------------
-
 st.divider()
+
+
+# ==================================================
+# 14. AI BUSINESS ANALYST
+# ==================================================
 
 st.header("🤖 AI Business Analyst")
 
 st.write(
-    "Generate an AI-powered business performance report "
-    "using your local Qwen model."
+    "Generate an AI-powered business report using "
+    "your local Qwen model through Ollama."
 )
 
-# Store report during Streamlit reruns
+# Initialize Streamlit session state
 if "ai_report" not in st.session_state:
 
     st.session_state.ai_report = ""
 
 
-# Generate report only when requested
+# AI report generation button
 if st.button(
     "Generate AI Business Report",
-    type="primary"
+    type="primary",
+    key="generate_ai_report"
 ):
+
+    # Clear previous report before generating a new one
+    st.session_state.ai_report = ""
 
     try:
 
@@ -358,14 +371,14 @@ if st.button(
             "Qwen is analysing your business data..."
         ):
 
-            # Create prompt from existing Python analysis
+            # Create prompt using verified Python analysis
             prompt = create_business_analysis_prompt(
                 kpis,
                 category_analysis,
                 subcategory_analysis
             )
 
-            # Generate AI report using Ollama
+            # Generate report using local Ollama model
             ai_report = generate_ai_business_report(
                 prompt
             )
@@ -379,23 +392,102 @@ if st.button(
         )
 
 
-# Display generated AI report
+# ==================================================
+# 15. BEFORE AND AFTER COMPARISON
+# ==================================================
+
 if st.session_state.ai_report:
 
-    st.subheader("AI-Generated Business Report")
+    st.divider()
 
-    st.markdown(
-        st.session_state.ai_report
+    st.header(
+        "📊 Before vs After: Data Storytelling"
     )
+
+    st.write(
+        "See how raw numerical analysis is transformed "
+        "into understandable business explanations."
+    )
+
+    before, after = st.columns(2)
+
+    # ----------------------------------------------
+    # BEFORE: RAW NUMERICAL ANALYSIS
+    # ----------------------------------------------
+
+    with before:
+
+        st.subheader("Before: Raw Numbers")
+
+        st.caption(
+            "Numerical results generated using Python GroupBy analysis."
+        )
+
+        st.markdown("**Category Analysis**")
+
+        st.dataframe(
+            category_df[
+                [
+                    "Category",
+                    "Total_Sales",
+                    "Total_Profit",
+                    "Profit_Margin"
+                ]
+            ],
+            use_container_width=True,
+            hide_index=True
+        )
+
+        st.markdown("**Subcategory Analysis**")
+
+        st.dataframe(
+            subcategory_df[
+                [
+                    "Sub-Category",
+                    "Total_Sales",
+                    "Total_Profit",
+                    "Profit_Margin"
+                ]
+            ],
+            use_container_width=True,
+            hide_index=True,
+            height=400
+        )
+
+
+    # ----------------------------------------------
+    # AFTER: AI-GENERATED BUSINESS NARRATIVE
+    # ----------------------------------------------
+
+    with after:
+
+        st.subheader("After: Business Narrative")
+
+        st.caption(
+            "Natural-language explanation generated using Qwen AI."
+        )
+
+        st.markdown(
+            st.session_state.ai_report
+        )
+
 
     st.success(
-        "AI business report generated successfully!"
+        "Raw business analysis transformed into an "
+        "AI-generated business narrative successfully!"
+    )
+
+else:
+
+    st.info(
+        "Click 'Generate AI Business Report' above to "
+        "see the Before and After comparison."
     )
 
 
-# --------------------------------------------------
-# 14. FOOTER
-# --------------------------------------------------
+# ==================================================
+# 16. FOOTER
+# ==================================================
 
 st.divider()
 

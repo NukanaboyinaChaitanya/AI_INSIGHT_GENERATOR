@@ -53,7 +53,7 @@ def clean_data(orders):
     df = df.dropna(subset=required_columns)
 
     # Exclude future-dated records
-    cutoff_date = pd.Timestamp.today().normalize()
+    cutoff_date = pd.Timestamp("2026-11-16")
 
     df = df[df["Order Date"] <= cutoff_date].copy()
 

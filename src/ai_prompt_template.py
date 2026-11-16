@@ -4,88 +4,69 @@ def create_business_analysis_prompt(
     category_analysis,
     subcategory_analysis
 ):
-
-    if category_analysis.empty or subcategory_analysis.empty:
-        raise ValueError("Business analysis data is empty.")
-
-    # Calculate verified business findings using Python
+    # Calculate verified findings using Python
     highest_sales = category_analysis["Total_Sales"].idxmax()
 
     highest_margin = category_analysis["Profit_Margin"].idxmax()
 
     lowest_margin = category_analysis["Profit_Margin"].idxmin()
 
-    # Identify loss-making subcategories
     loss_making = subcategory_analysis[
         subcategory_analysis["Total_Profit"] < 0
-    ]
+    ].index.tolist()
 
-    # Format loss-making subcategories
-    if not loss_making.empty:
-        loss_details = "\n".join(
-            f"{name}: Profit ${row['Total_Profit']:,.2f}, "
-            f"Margin {row['Profit_Margin']:.2f}%"
-            for name, row in loss_making.iterrows()
-        )
-    else:
-        loss_details = "No loss-making subcategories."
+    top_subcategories = (
+        subcategory_analysis["Profit_Margin"]
+        .nlargest(3)
+        .index.tolist()
+    )
 
-    # Convert analysis tables into readable text
-    category_table = category_analysis.round(2).to_string()
+    # Prepare verified findings for the AI
+    verified_findings = f"""
+VERIFIED BUSINESS FINDINGS:
 
-    subcategory_table = subcategory_analysis.round(2).to_string()
+Overall business profitability:
+{"The business is profitable." if kpi_summary["Total Profit"] > 0 else "The business is operating at a loss."}
+
+Category with highest sales: {highest_sales}
+
+Category with highest profit margin: {highest_margin}
+
+Category with lowest profit margin: {lowest_margin}
+
+Loss-making subcategories: {", ".join(loss_making) if loss_making else "None"}
+
+Top three subcategories by profit margin:
+{", ".join(top_subcategories)}
+"""
 
     prompt = f"""
 You are an experienced retail business analyst.
 
-Analyze the following verified retail business results.
+Your task is to explain the following verified business findings
+in simple, professional English.
 
-BUSINESS KPIs:
-{kpi_summary}
+{verified_findings}
 
-VERIFIED CATEGORY FINDINGS:
+STRICT INSTRUCTIONS:
 
-Category with highest sales: {highest_sales}
-Sales: ${category_analysis.loc[highest_sales, 'Total_Sales']:,.2f}
+1. Use only the verified findings supplied above.
+2. Do not invent sales figures, profits, percentages or statistics.
+3. Do not include any numerical values, currency amounts or percentages.
+4. Do not recalculate any metrics.
+5. Do not change the names or rankings of categories.
+6. Do not assume why a product is profitable or loss-making.
+7. Present possible causes as areas to investigate, not confirmed facts.
+8. Avoid unsupported claims about customer behaviour or sales trends.
 
-Category with highest profit margin: {highest_margin}
-Margin: {category_analysis.loc[highest_margin, 'Profit_Margin']:.2f}%
-
-Category with lowest profit margin: {lowest_margin}
-Margin: {category_analysis.loc[lowest_margin, 'Profit_Margin']:.2f}%
-
-LOSS-MAKING SUBCATEGORIES:
-{loss_details}
-
-COMPLETE CATEGORY ANALYSIS:
-{category_table}
-
-COMPLETE SUBCATEGORY ANALYSIS:
-{subcategory_table}
-
-IMPORTANT RULES:
-
-1. Treat all supplied numerical values and verified findings as correct.
-2. Technology has the highest sales, if confirmed by the supplied findings.
-3. Never assign one category's sales or profit to another category.
-4. Do not recalculate supplied metrics.
-5. Do not invent facts or causes.
-6. Negative aggregate profit does not mean every transaction is loss-making.
-7. Do not describe average order value as stable without historical comparison.
-8. Present recommendations as areas to investigate, not confirmed causes.
-9. Distinguish observations from possible explanations.
-10. Avoid repeating the same information.
-
-Write a professional business report using exactly these sections:
+Write your report using these four sections:
 
 1. Executive Summary
 2. Key Business Findings
 3. Areas of Concern
 4. Three Practical Business Recommendations
 
-Use simple professional English.
-Keep the report approximately 150-200 words.
-Complete all four sections.
+Keep the report concise, professional and easy to understand.
 """
 
     return prompt
